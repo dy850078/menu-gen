@@ -757,6 +757,12 @@ function saveItem(itemId) {
   const price = parseInt(document.getElementById('item-price').value) || 0;
   const categoryId = document.getElementById('item-cat').value;
   if (!name) { alert('請輸入品項名稱'); return; }
+  const duplicate = state.items.find(i => i.id !== itemId && i.name.trim() === name);
+  if (duplicate) {
+    const dupCat = state.categories.find(c => c.id === duplicate.categoryId);
+    const catLabel = dupCat ? `${dupCat.emoji} ${dupCat.name}` : '未分類';
+    if (!confirm(`已經有同名品項：\n「${duplicate.name}」（${catLabel}，$${duplicate.price}）\n\n還是要繼續儲存嗎？`)) return;
+  }
   if (itemId) {
     const item = state.items.find(i => i.id === itemId);
     if (item) { item.name = name; item.price = price; item.categoryId = categoryId; }
