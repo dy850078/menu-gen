@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="本週菜單">
+<meta name="theme-color" content="#fef9f3">
+<title>本週菜單產生器</title>
+<style>
+:root {
+  --bg: #fef9f3;
+  --card: #ffffff;
+  --text: #2a2a2a;
+  --muted: #8a8378;
+  --accent: #d97706;
+  --accent-soft: #fef3c7;
+  --preorder: #2563eb;
+  --preorder-soft: #dbeafe;
+  --border: #ece5d8;
+  --danger: #dc2626;
+  --radius: 12px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Helvetica Neue", "Microsoft JhengHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+body { padding-bottom: 40px; }
+
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(254, 249, 243, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 12px 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+h1 { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
+
+nav.tabs { display: flex; }
+nav.tabs button {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 10px 8px;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+nav.tabs button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+main { padding: 14px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.summary-text { font-size: 14px; }
+.badge-pre { color: var(--preorder); font-weight: 600; }
+.badge-stk { color: var(--accent); font-weight: 600; }
+
+.cat-header {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.item-block {
+  padding: 8px 0;
+  border-bottom: 1px dashed #f0ead8;
+}
+.item-block:last-child { border-bottom: none; padding-bottom: 0; }
+
+.item-row1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.item-name {
+  flex: 1;
+  font-size: 15px;
+  word-break: break-word;
+}
+.item-row2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  min-height: 34px;
+}
+.chip.active.preorder {
+  background: var(--preorder-soft);
+  border-color: var(--preorder);
+  color: var(--preorder);
+  font-weight: 600;
+}
+.chip.active.stock {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: #b45309;
+  font-weight: 600;
+}
+.chip.note-chip { margin-left: auto; }
+.chip.note-chip.has-note { background: #fef3c7; color: #92400e; }
+
+input[type="number"], input[type="text"], select, textarea {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+  font-family: inherit;
+  background: white;
+  color: var(--text);
+}
+input[type="number"]:focus, input[type="text"]:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.price-input { width: 80px; text-align: right; }
+.qty-input { width: 56px; text-align: center; }
+.text-input { width: 100%; }
+
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 500;
+}
+.btn.secondary {
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.danger { background: var(--danger); color: white; border: none; }
+.btn.small {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.btn.block { width: 100%; }
+
+.output-area {
+  font-family: -apple-system, "PingFang TC", "Courier New", monospace;
+  white-space: pre-wrap;
+  background: #f9f5ea;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+  word-break: break-word;
+}
+
+textarea.template-edit {
+  width: 100%;
+  min-height: 70px;
+  font-family: -apple-system, "PingFang TC", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.muted { color: var(--muted); font-size: 13px; }
+
+.note-display {
+  margin-left: 16px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: #fffbeb;
+  border-left: 3px solid var(--accent);
+  font-size: 13px;
+  color: #78350f;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal {
+  background: var(--bg);
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 600px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 20px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.modal-header strong { font-size: 17px; }
+
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20,20,20,0.9);
+  color: white;
+  padding: 12px 22px;
+  border-radius: 24px;
+  font-size: 14px;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.toast.show { opacity: 1; }
+
+.cat-mgmt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #f0ead8;
+}
+.cat-mgmt-row:last-child { border-bottom: none; }
+.cat-mgmt-row input[type="text"] { padding: 6px 8px; font-size: 14px; }
+.cat-mgmt-row .emoji-input { width: 48px; text-align: center; }
+
+.help-text {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--muted);
+}
+
+.tip {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #78350f;
+  margin-bottom: 12px;
+}
+
+.add-item-inline {
+  text-align: center;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  background: transparent;
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
+}
+.add-item-inline:hover { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📝 本週菜單產生器</h1>
+  <nav class="tabs">
+    <button class="active" data-tab="weekly">本週菜單</button>
+    <button data-tab="items">品項管理</button>
+    <button data-tab="settings">設定</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-weekly"></section>
+  <section id="tab-items" hidden></section>
+  <section id="tab-settings" hidden></section>
+</main>
+
+<div id="modal-root"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+// ============ Data Layer ============
+const STORAGE_KEY = 'menu_app_v1';
+
+const defaultState = {
+  categories: [
+    { id: 'c1', name: '1–2人湯品', emoji: '🥣' },
+    { id: 'c2', name: '1–2人分享料理', emoji: '🍽' },
+    { id: 'c3', name: '2–3人分享料理', emoji: '🍽' },
+  ],
+  items: [
+    { id: 'i1', name: '鳳梨苦瓜雞湯', price: 180, categoryId: 'c1' },
+    { id: 'i2', name: '巴西蘑菇蛤蜊雞湯', price: 200, categoryId: 'c1' },
+    { id: 'i3', name: '番茄清燉牛肉湯', price: 250, categoryId: 'c1' },
+    { id: 'i4', name: '椰香芋頭西米露', price: 180, categoryId: 'c1' },
+    { id: 'i5', name: '綠豆大薏仁甜湯', price: 150, categoryId: 'c1' },
+    { id: 'i6', name: '九尾草山藥龍骨湯', price: 200, categoryId: 'c1' },
+    { id: 'i7', name: '蒜頭蛤蜊雞湯', price: 200, categoryId: 'c1' },
+    { id: 'i8', name: '牛蒡山藥龍骨湯', price: 180, categoryId: 'c1' },
+    { id: 'i9', name: '四神龍骨湯', price: 180, categoryId: 'c1' },
+    { id: 'i10', name: '鱸魚蛤蜊湯', price: 250, categoryId: 'c1' },
+    { id: 'i11', name: '芋香米粉', price: 100, categoryId: 'c2' },
+    { id: 'i12', name: '蔬食水餃（20入）', price: 180, categoryId: 'c3' },
+    { id: 'i13', name: '梅乾菜滷桂竹筍', price: 300, categoryId: 'c3' },
+    { id: 'i14', name: '古早味冬瓜肉', price: 200, categoryId: 'c3' },
+    { id: 'i15', name: '炸醬豆乾', price: 200, categoryId: 'c3' },
+    { id: 'i16', name: '蕃茄糖醋排骨酥', price: 300, categoryId: 'c3' },
+    { id: 'i17', name: '苦瓜鑲肉', price: 180, categoryId: 'c3' },
+    { id: 'i18', name: '香Q豬腳', price: 300, categoryId: 'c3' },
+    { id: 'i19', name: '香菇肉燥', price: 200, categoryId: 'c3' },
+  ],
+  weekly: {
+    preorder: {},
+    stock: {},
+  },
+  templates: {
+    preorderHeader: '📣 下週好食預訂開放囉（需提前預訂）',
+    stockHeader: '🔥【現貨區（售完為止）】',
+    footer: '📌 溫馨提醒：\n✔ 預訂商品請提前告知\n✔ 現貨數量有限，依下單順序保留\n\n歡迎私訊訂購 🙌',
+    separator: '—————————',
+  },
+};
+
+let state = load();
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return Object.assign({}, JSON.parse(JSON.stringify(defaultState)), parsed);
+    }
+  } catch (e) { console.error(e); }
+  return JSON.parse(JSON.stringify(defaultState));
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function uid() {
+  return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// ============ Tab Navigation ============
+document.querySelectorAll('nav.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('main > section').forEach(s => s.hidden = true);
+    document.getElementById('tab-' + btn.dataset.tab).hidden = false;
+    window.scrollTo({ top: 0 });
+  });
+});
+
+// ============ Toast ============
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ============ Render ============
+function render() {
+  renderWeekly();
+  renderItems();
+  renderSettings();
+}
+
+// ============ Weekly Tab ============
+function renderWeekly() {
+  const el = document.getElementById('tab-weekly');
+  const preorderCount = Object.keys(state.weekly.preorder).length;
+  const stockCount = Object.keys(state.weekly.stock).length;
+
+  let html = '';
+
+  // Summary
+  html += `<div class="card">
+    <div class="summary">
+      <div class="summary-text">
+        <strong>本週已選</strong>
+        <span class="badge-pre">預購 ${preorderCount}</span>
+        <span class="badge-stk">現貨 ${stockCount}</span>
+      </div>
+      ${(preorderCount + stockCount > 0) ? `<button class="btn small secondary" onclick="clearWeekly()">清空</button>` : ''}
+    </div>
+  </div>`;
+
+  // Tip on first use
+  if (state.items.length > 0 && preorderCount + stockCount === 0) {
+    html += `<div class="tip">
+      點下方品項旁的「預購」或「現貨」按鈕加入本週菜單，再按最下方「產生菜單文字」即可複製貼到 LINE。
+    </div>`;
+  }
+
+  // Items grouped by category
+  state.categories.forEach(cat => {
+    const items = state.items.filter(i => i.categoryId === cat.id);
+    if (items.length === 0 && !cat._showEmpty) return;
+    html += `<div class="card">
+      <div class="cat-header">${escapeHtml(cat.emoji)} ${escapeHtml(cat.name)}</div>`;
+    items.forEach(item => {
+      const pre = state.weekly.preorder[item.id];
+      const stk = state.weekly.stock[item.id];
+      const noteText = pre?.note || stk?.note || '';
+      html += `<div class="item-block">
+        <div class="item-row1">
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <span class="muted">$</span>
+          <input type="number" inputmode="numeric" class="price-input"
+            value="${item.price}"
+            onchange="updateItemPrice('${item.id}', this.value)" />
+        </div>
+        <div class="item-row2">
+          <button class="chip ${pre ? 'active preorder' : ''}" onclick="togglePreorder('${item.id}')">${pre ? '✓ ' : ''}預購</button>
+          <button class="chip ${stk ? 'active stock' : ''}" onclick="toggleStock('${item.id}')">${stk ? '✓ ' : ''}現貨</button>
+          ${stk ? `<span class="muted">數量</span><input type="number" inputmode="numeric" class="qty-input" min="1" value="${stk.quantity}" onchange="updateQuantity('${item.id}', this.value)" />` : ''}
+          ${(pre || stk) ? `<button class="chip note-chip ${noteText ? 'has-note' : ''}" onclick="editNote('${item.id}')">📝 ${noteText ? '備註' : '加備註'}</button>` : ''}
+        </div>
+        ${noteText ? `<div class="note-display">${escapeHtml(noteText)}</div>` : ''}
+      </div>`;
+    });
+    html += `<button class="add-item-inline" onclick="newItemInCategory('${cat.id}')">+ 在此分類加入新品項</button>`;
+    html += `</div>`;
+  });
+
+  // Items with no category (orphans)
+  const orphans = state.items.filter(i => !state.categories.find(c => c.id === i.categoryId));
+  if (orphans.length > 0) {
+    html += `<div class="card">
+      <div class="cat-header">⚠️ 未分類品項</div>
+      <p class="help-text">這些品項的分類被刪除了。請到「品項管理」重新指定分類。</p>`;
+    orphans.forEach(item => {
+      html += `<div class="item-block"><div class="item-name">${escapeHtml(item.name)} ($${item.price})</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (state.items.length === 0) {
+    html += `<div class="card empty-state">
+      <p>還沒有任何品項。</p>
+      <button class="btn" onclick="newItem()">+ 新增第一個品項</button>
+    </div>`;
+  }
+
+  // Generate button
+  html += `<button class="btn block" onclick="generateOutput()" style="margin-top: 16px; font-size: 16px; padding: 14px;">✨ 產生菜單文字</button>`;
+
+  // Output area
+  html += `<div id="output-section" style="margin-top: 16px;" hidden>
+    <p class="muted" style="margin: 12px 4px 6px;">↓ 預覽（已經是 LINE 可直接貼的格式）</p>
+    <pre class="output-area" id="output-text"></pre>
+    <button class="btn block" onclick="copyOutput()" style="margin-top: 10px;">📋 複製全部</button>
+  </div>`;
+
+  el.innerHTML = html;
+}
+
+function updateItemPrice(itemId, value) {
+  const v = parseInt(value) || 0;
+  const item = state.items.find(i => i.id === itemId);
+  if (item) {
+    item.price = v;
+    save();
+  }
+}
+
+function togglePreorder(itemId) {
+  if (state.weekly.preorder[itemId]) {
+    delete state.weekly.preorder[itemId];
+  } else {
+    state.weekly.preorder[itemId] = { note: '' };
+  }
+  save();
+  renderWeekly();
+}
+
+function toggleStock(itemId) {
+  if (state.weekly.stock[itemId]) {
+    delete state.weekly.stock[itemId];
+  } else {
+    state.weekly.stock[itemId] = { quantity: 1, note: '' };
+  }
+  save();
+  renderWeekly();
+}
+
+function updateQuantity(itemId, value) {
+  const v = Math.max(1, parseInt(value) || 1);
+  if (state.weekly.stock[itemId]) {
+    state.weekly.stock[itemId].quantity = v;
+    save();
+  }
+}
+
+function editNote(itemId) {
+  const pre = state.weekly.preorder[itemId];
+  const stk = state.weekly.stock[itemId];
+  const current = pre?.note || stk?.note || '';
+  const item = state.items.find(i => i.id === itemId);
+  showModal('編輯備註：' + (item?.name || ''), `
+    <p class="help-text">備註會印在該品項的下方，例如「（4包甜甜價$900）」這類組合說明。</p>
+    <div class="field">
+      <textarea class="template-edit" id="note-input" placeholder="（4包甜甜價$900）">${escapeHtml(current)}</textarea>
+    </div>
+    <div class="row">
+      <button class="btn block" onclick="saveNote('${itemId}')">儲存</button>
+      ${current ? `<button class="btn secondary" onclick="clearNote('${itemId}')">清除備註</button>` : ''}
+    </div>
+  `);
+}
+function saveNote(itemId) {
+  const value = document.getElementById('note-input').value;
+  if (state.weekly.preorder[itemId]) state.weekly.preorder[itemId].note = value;
+  if (state.weekly.stock[itemId]) state.weekly.stock[itemId].note = value;
+  save();
+  closeModal();
+  renderWeekly();
+}
+function clearNote(itemId) {
+  if (state.weekly.preorder[itemId]) state.weekly.preorder[itemId].note = '';
+  if (state.weekly.stock[itemId]) state.weekly.stock[itemId].note = '';
+  save();
+  closeModal();
+  renderWeekly();
+}
+
+function clearWeekly() {
+  if (!confirm('確定要清空本週的所有選擇嗎？\n（品項清單不會被刪除）')) return;
+  state.weekly = { preorder: {}, stock: {} };
+  save();
+  renderWeekly();
+}
+
+function generateOutput() {
+  const t = state.templates;
+  let out = '';
+  const hasPreorder = Object.keys(state.weekly.preorder).length > 0;
+  const hasStock = Object.keys(state.weekly.stock).length > 0;
+
+  if (!hasPreorder && !hasStock) {
+    alert('還沒選擇任何品項。請先點品項旁的「預購」或「現貨」按鈕。');
+    return;
+  }
+
+  if (hasPreorder) {
+    out += t.preorderHeader + '\n\n';
+    state.categories.forEach((cat, ci) => {
+      const itemsInCat = state.items.filter(i =>
+        i.categoryId === cat.id && state.weekly.preorder[i.id]
+      );
+      if (itemsInCat.length === 0) return;
+      out += `${cat.emoji}【${cat.name}】\n`;
+      itemsInCat.forEach(item => {
+        const sel = state.weekly.preorder[item.id];
+        out += `• ${item.name} $${item.price}\n`;
+        if (sel.note) out += `${sel.note}\n`;
+      });
+      out += '\n';
+    });
+    if (hasStock) {
+      out = out.trimEnd() + '\n' + t.separator + '\n\n';
+    }
+  }
+
+  if (hasStock) {
+    out += t.stockHeader + '\n\n';
+    state.categories.forEach(cat => {
+      const itemsInCat = state.items.filter(i =>
+        i.categoryId === cat.id && state.weekly.stock[i.id]
+      );
+      if (itemsInCat.length === 0) return;
+      out += `${cat.emoji}【${cat.name}】\n`;
+      itemsInCat.forEach(item => {
+        const sel = state.weekly.stock[item.id];
+        out += `• ${item.name} $${item.price}    x${sel.quantity}\n`;
+        if (sel.note) out += `${sel.note}\n`;
+      });
+      out += '\n';
+    });
+  }
+
+  out = out.trimEnd() + '\n' + t.separator + '\n\n' + t.footer;
+
+  document.getElementById('output-text').textContent = out;
+  const section = document.getElementById('output-section');
+  section.hidden = false;
+  setTimeout(() => section.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+async function copyOutput() {
+  const text = document.getElementById('output-text').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('✓ 已複製，可貼到 LINE');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('✓ 已複製'); }
+    catch (err) { toast('複製失敗，請長按文字手動複製'); }
+    document.body.removeChild(ta);
+  }
+}
+
+// ============ Items Tab ============
+function renderItems() {
+  const el = document.getElementById('tab-items');
+  let html = `<button class="btn block" onclick="newItem()" style="margin-bottom: 12px;">+ 新增品項</button>`;
+
+  state.categories.forEach(cat => {
+    const items = state.items.filter(i => i.categoryId === cat.id);
+    if (items.length === 0) return;
+    html += `<div class="card">
+      <div class="cat-header">${escapeHtml(cat.emoji)} ${escapeHtml(cat.name)} <span class="muted" style="font-weight: normal;">（${items.length}）</span></div>`;
+    items.forEach((item, idx) => {
+      html += `<div class="item-block">
+        <div class="item-row1">
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <span class="muted">$${item.price}</span>
+        </div>
+        <div class="item-row2">
+          <button class="btn small secondary" onclick="editItem('${item.id}')">編輯</button>
+          <button class="btn small secondary" onclick="moveItem('${item.id}', -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+          <button class="btn small secondary" onclick="moveItem('${item.id}', 1)" ${idx === items.length - 1 ? 'disabled' : ''}>↓</button>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  const orphans = state.items.filter(i => !state.categories.find(c => c.id === i.categoryId));
+  if (orphans.length > 0) {
+    html += `<div class="card">
+      <div class="cat-header">⚠️ 未分類品項</div>`;
+    orphans.forEach(item => {
+      html += `<div class="item-block">
+        <div class="item-row1">
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <span class="muted">$${item.price}</span>
+        </div>
+        <button class="btn small secondary" onclick="editItem('${item.id}')">編輯</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function newItem() {
+  itemModal({ id: '', name: '', price: 0, categoryId: state.categories[0]?.id || '' });
+}
+function newItemInCategory(catId) {
+  itemModal({ id: '', name: '', price: 0, categoryId: catId });
+}
+function editItem(itemId) {
+  const item = state.items.find(i => i.id === itemId);
+  if (item) itemModal(item);
+}
+function itemModal(item) {
+  const isNew = !item.id;
+  const options = state.categories.map(c =>
+    `<option value="${c.id}" ${c.id === item.categoryId ? 'selected' : ''}>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</option>`
+  ).join('');
+  showModal(isNew ? '新增品項' : '編輯品項', `
+    <div class="field">
+      <label>品項名稱</label>
+      <input type="text" class="text-input" id="item-name" value="${escapeHtml(item.name)}" placeholder="例：鳳梨苦瓜雞湯" />
+    </div>
+    <div class="field">
+      <label>預設價格</label>
+      <input type="number" inputmode="numeric" class="text-input" id="item-price" value="${item.price}" placeholder="180" />
+    </div>
+    <div class="field">
+      <label>分類</label>
+      <select class="text-input" id="item-cat">${options}</select>
+    </div>
+    <div class="row">
+      <button class="btn block" onclick="saveItem('${item.id}')">儲存</button>
+      ${!isNew ? `<button class="btn danger" onclick="deleteItem('${item.id}')">刪除</button>` : ''}
+    </div>
+  `);
+}
+function saveItem(itemId) {
+  const name = document.getElementById('item-name').value.trim();
+  const price = parseInt(document.getElementById('item-price').value) || 0;
+  const categoryId = document.getElementById('item-cat').value;
+  if (!name) { alert('請輸入品項名稱'); return; }
+  if (itemId) {
+    const item = state.items.find(i => i.id === itemId);
+    if (item) { item.name = name; item.price = price; item.categoryId = categoryId; }
+  } else {
+    state.items.push({ id: uid(), name, price, categoryId });
+  }
+  save();
+  closeModal();
+  render();
+}
+function deleteItem(itemId) {
+  if (!confirm('確定要刪除此品項嗎？\n（本週菜單中的選擇也會一併移除）')) return;
+  state.items = state.items.filter(i => i.id !== itemId);
+  delete state.weekly.preorder[itemId];
+  delete state.weekly.stock[itemId];
+  save();
+  closeModal();
+  render();
+}
+function moveItem(itemId, dir) {
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return;
+  const sameCat = state.items.filter(i => i.categoryId === item.categoryId);
+  const idxInCat = sameCat.indexOf(item);
+  const targetItem = sameCat[idxInCat + dir];
+  if (!targetItem) return;
+  const i1 = state.items.indexOf(item);
+  const i2 = state.items.indexOf(targetItem);
+  state.items[i1] = targetItem;
+  state.items[i2] = item;
+  save();
+  render();
+}
+
+// ============ Settings Tab ============
+function renderSettings() {
+  const el = document.getElementById('tab-settings');
+  const t = state.templates;
+  let html = `
+    <div class="card">
+      <div class="cat-header">📂 分類管理</div>
+      <p class="help-text">調整分類順序、名稱與 emoji。順序會反映在菜單中。</p>`;
+  state.categories.forEach((cat, idx) => {
+    html += `<div class="cat-mgmt-row">
+      <input type="text" class="emoji-input" value="${escapeHtml(cat.emoji)}" maxlength="4"
+        onchange="updateCategory('${cat.id}', 'emoji', this.value)" />
+      <input type="text" style="flex:1;" value="${escapeHtml(cat.name)}"
+        onchange="updateCategory('${cat.id}', 'name', this.value)" />
+      <button class="btn small secondary" onclick="moveCategory('${cat.id}', -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+      <button class="btn small secondary" onclick="moveCategory('${cat.id}', 1)" ${idx === state.categories.length - 1 ? 'disabled' : ''}>↓</button>
+      <button class="btn small danger" onclick="deleteCategory('${cat.id}')">×</button>
+    </div>`;
+  });
+  html += `<button class="btn small secondary" onclick="addCategory()" style="margin-top: 10px;">+ 新增分類</button>
+    </div>
+
+    <div class="card">
+      <div class="cat-header">✏️ 文字模板</div>
+      <p class="help-text">每週開頭、結尾的固定文字。改了之後產生菜單時就會用新版本。</p>
+      <div class="field">
+        <label>預購區開頭</label>
+        <textarea class="template-edit" onchange="updateTemplate('preorderHeader', this.value)">${escapeHtml(t.preorderHeader)}</textarea>
+      </div>
+      <div class="field">
+        <label>現貨區開頭</label>
+        <textarea class="template-edit" onchange="updateTemplate('stockHeader', this.value)">${escapeHtml(t.stockHeader)}</textarea>
+      </div>
+      <div class="field">
+        <label>結尾溫馨提醒</label>
+        <textarea class="template-edit" style="min-height: 130px;" onchange="updateTemplate('footer', this.value)">${escapeHtml(t.footer)}</textarea>
+      </div>
+      <div class="field">
+        <label>區段分隔線</label>
+        <input type="text" class="text-input" value="${escapeHtml(t.separator)}" onchange="updateTemplate('separator', this.value)" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cat-header">💾 備份 / 還原</div>
+      <p class="help-text">資料只存在這支手機，建議定期下載備份。換手機或不小心清掉時可以還原。</p>
+      <button class="btn block secondary" onclick="exportData()" style="margin-bottom: 8px;">📥 下載備份檔</button>
+      <button class="btn block secondary" onclick="document.getElementById('import-file').click()">📤 從備份檔還原</button>
+      <input type="file" id="import-file" accept=".json,application/json" hidden onchange="importData(event)" />
+    </div>
+
+    <div class="card">
+      <div class="cat-header">⚙️ 其他</div>
+      <button class="btn block danger" onclick="resetAll()">恢復出廠預設（清除所有資料）</button>
+    </div>
+  `;
+  el.innerHTML = html;
+}
+function updateCategory(catId, field, value) {
+  const cat = state.categories.find(c => c.id === catId);
+  if (cat) { cat[field] = value; save(); }
+}
+function moveCategory(catId, dir) {
+  const idx = state.categories.findIndex(c => c.id === catId);
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= state.categories.length) return;
+  const [moved] = state.categories.splice(idx, 1);
+  state.categories.splice(newIdx, 0, moved);
+  save();
+  renderSettings();
+}
+function deleteCategory(catId) {
+  const itemsInCat = state.items.filter(i => i.categoryId === catId).length;
+  if (itemsInCat > 0) {
+    if (!confirm(`此分類下有 ${itemsInCat} 個品項。刪除分類後這些品項會變成「未分類」（不會被刪除）。確定？`)) return;
+  } else {
+    if (!confirm('確定刪除此分類？')) return;
+  }
+  state.categories = state.categories.filter(c => c.id !== catId);
+  save();
+  renderSettings();
+}
+function addCategory() {
+  showModal('新增分類', `
+    <div class="field">
+      <label>Emoji（一個圖示，可從鍵盤選取）</label>
+      <input type="text" class="text-input" id="cat-emoji" maxlength="4" placeholder="🍴" />
+    </div>
+    <div class="field">
+      <label>分類名稱</label>
+      <input type="text" class="text-input" id="cat-name" placeholder="例：飲品" />
+    </div>
+    <button class="btn block" onclick="saveNewCategory()">新增</button>
+  `);
+}
+function saveNewCategory() {
+  const emoji = document.getElementById('cat-emoji').value.trim() || '📌';
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) { alert('請輸入分類名稱'); return; }
+  state.categories.push({ id: uid(), name, emoji });
+  save();
+  closeModal();
+  renderSettings();
+}
+function updateTemplate(key, value) {
+  state.templates[key] = value;
+  save();
+}
+function exportData() {
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const dateStr = new Date().toISOString().slice(0,10);
+  a.download = `菜單備份-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('已下載備份檔');
+}
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.categories || !imported.items || !imported.templates) {
+        throw new Error('檔案格式不正確');
+      }
+      if (!confirm('還原會覆蓋目前所有資料，確定要繼續嗎？')) return;
+      state = Object.assign({}, JSON.parse(JSON.stringify(defaultState)), imported);
+      if (!state.weekly) state.weekly = { preorder: {}, stock: {} };
+      save();
+      render();
+      toast('還原完成');
+    } catch (err) {
+      alert('無法讀取備份檔：' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+function resetAll() {
+  if (!confirm('這會清除所有品項、分類、本週菜單以及模板，並回到一開始的預設值。\n\n確定要繼續嗎？')) return;
+  if (!confirm('真的確定？這個動作無法復原。')) return;
+  state = JSON.parse(JSON.stringify(defaultState));
+  save();
+  render();
+  toast('已恢復出廠預設');
+}
+
+// ============ Modal ============
+function showModal(title, bodyHtml) {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <strong>${escapeHtml(title)}</strong>
+        <button class="btn small secondary" onclick="closeModal()">關閉</button>
+      </div>
+      ${bodyHtml}
+    </div>
+  </div>`;
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal-root').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+// ============ Utils ============
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  })[c]);
+}
+
+// ============ Init ============
+render();
+</script>
+</body>
+</html>
