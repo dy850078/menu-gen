@@ -476,7 +476,7 @@ function renderWeekly() {
         <div class="item-row2">
           <button class="chip ${pre ? 'active preorder' : ''}" onclick="togglePreorder('${item.id}')">${pre ? '✓ ' : ''}預購</button>
           <button class="chip ${stk ? 'active stock' : ''}" onclick="toggleStock('${item.id}')">${stk ? '✓ ' : ''}現貨</button>
-          ${stk ? `<span class="muted">數量</span><input type="number" inputmode="numeric" class="qty-input" min="1" value="${stk.quantity}" onchange="updateQuantity('${item.id}', this.value)" />` : ''}
+          ${stk ? `<span class="muted">數量</span><input type="number" inputmode="numeric" class="qty-input" min="1" value="${stk.quantity}" onfocus="this.select()" onchange="updateQuantity('${item.id}', this.value)" />` : ''}
           ${(pre || stk) ? `<button class="chip note-chip ${noteText ? 'has-note' : ''}" onclick="editNote('${item.id}')">📝 ${noteText ? '備註' : '加備註'}</button>` : ''}
         </div>
         ${noteText ? `<div class="note-display">${escapeHtml(noteText)}</div>` : ''}
