@@ -488,6 +488,17 @@ function load() {
         merged._seededListDefaults = true;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       }
+      if (!merged._notesOnItem) {
+        const adopt = (sel, id) => {
+          if (!sel || !sel.note) return;
+          const item = merged.items.find(i => i.id === id);
+          if (item && !item.note) item.note = sel.note;
+        };
+        Object.entries(merged.weekly.preorder || {}).forEach(([id, sel]) => adopt(sel, id));
+        Object.entries(merged.weekly.stock || {}).forEach(([id, sel]) => adopt(sel, id));
+        merged._notesOnItem = true;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
       return merged;
     }
   } catch (e) { console.error(e); }
@@ -575,7 +586,7 @@ function renderWeekly() {
       items.forEach(item => {
         const pre = state.weekly.preorder[item.id];
         const stk = state.weekly.stock[item.id];
-        const noteText = pre?.note || stk?.note || '';
+        const noteText = item.note || '';
         html += `<div class="item-block">
           <div class="item-row1">
             <div class="item-name">${escapeHtml(item.name)}</div>
@@ -588,7 +599,7 @@ function renderWeekly() {
             <button class="chip ${pre ? 'active preorder' : ''}" onclick="togglePreorder('${item.id}')">${pre ? '✓ ' : ''}預購</button>
             <button class="chip ${stk ? 'active stock' : ''}" onclick="toggleStock('${item.id}')">${stk ? '✓ ' : ''}現貨</button>
             ${stk ? `<span class="muted">數量</span><input type="number" inputmode="numeric" class="qty-input" min="1" value="${stk.quantity}" onfocus="this.select()" onchange="updateQuantity('${item.id}', this.value)" />` : ''}
-            ${(pre || stk) ? `<button class="chip note-chip ${noteText ? 'has-note' : ''}" onclick="editNote('${item.id}')">📝 ${noteText ? '備註' : '加備註'}</button>` : ''}
+            <button class="chip note-chip ${noteText ? 'has-note' : ''}" onclick="editNote('${item.id}')">📝 ${noteText ? '備註' : '加備註'}</button>
           </div>
           ${noteText ? `<div class="note-display">${escapeHtml(noteText)}</div>` : ''}
         </div>`;
@@ -643,7 +654,7 @@ function togglePreorder(itemId) {
   if (state.weekly.preorder[itemId]) {
     delete state.weekly.preorder[itemId];
   } else {
-    state.weekly.preorder[itemId] = { note: '' };
+    state.weekly.preorder[itemId] = {};
   }
   save();
   renderWeekly();
@@ -653,7 +664,7 @@ function toggleStock(itemId) {
   if (state.weekly.stock[itemId]) {
     delete state.weekly.stock[itemId];
   } else {
-    state.weekly.stock[itemId] = { quantity: 1, note: '' };
+    state.weekly.stock[itemId] = { quantity: 1 };
   }
   save();
   renderWeekly();
@@ -678,12 +689,10 @@ function updateQuantity(itemId, value) {
 }
 
 function editNote(itemId) {
-  const pre = state.weekly.preorder[itemId];
-  const stk = state.weekly.stock[itemId];
-  const current = pre?.note || stk?.note || '';
   const item = state.items.find(i => i.id === itemId);
+  const current = item?.note || '';
   showModal('編輯備註：' + (item?.name || ''), `
-    <p class="help-text">備註會印在該品項的下方，例如「（4包甜甜價$900）」這類組合說明。</p>
+    <p class="help-text">備註會印在該品項的下方，例如「（4包甜甜價$900）」這類組合說明。備註跟品項綁定，不論預購或現貨都會帶上。</p>
     <div class="field">
       <textarea class="template-edit" id="note-input" placeholder="（4包甜甜價$900）">${escapeHtml(current)}</textarea>
     </div>
@@ -695,15 +704,15 @@ function editNote(itemId) {
 }
 function saveNote(itemId) {
   const value = document.getElementById('note-input').value;
-  if (state.weekly.preorder[itemId]) state.weekly.preorder[itemId].note = value;
-  if (state.weekly.stock[itemId]) state.weekly.stock[itemId].note = value;
+  const item = state.items.find(i => i.id === itemId);
+  if (item) item.note = value;
   save();
   closeModal();
   renderWeekly();
 }
 function clearNote(itemId) {
-  if (state.weekly.preorder[itemId]) state.weekly.preorder[itemId].note = '';
-  if (state.weekly.stock[itemId]) state.weekly.stock[itemId].note = '';
+  const item = state.items.find(i => i.id === itemId);
+  if (item) item.note = '';
   save();
   closeModal();
   renderWeekly();
@@ -745,9 +754,8 @@ function generateOutput() {
       if (itemsInCat.length === 0) return;
       out += `${cat.emoji}【${cat.name}】\n`;
       itemsInCat.forEach(item => {
-        const sel = state.weekly.preorder[item.id];
         out += `• ${item.name} $${item.price}\n`;
-        if (sel.note) out += `${sel.note}\n`;
+        if (item.note) out += `${item.note}\n`;
       });
       out += '\n';
     });
@@ -767,7 +775,7 @@ function generateOutput() {
       itemsInCat.forEach(item => {
         const sel = state.weekly.stock[item.id];
         out += `• ${item.name} $${item.price}    x${sel.quantity}\n`;
-        if (sel.note) out += `${sel.note}\n`;
+        if (item.note) out += `${item.note}\n`;
       });
       out += '\n';
     });
