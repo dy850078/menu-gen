@@ -290,14 +290,22 @@ textarea.template-edit {
 
 .cat-mgmt-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 6px 0;
   border-bottom: 1px dashed #f0ead8;
 }
 .cat-mgmt-row:last-child { border-bottom: none; }
-.cat-mgmt-row input[type="text"] { padding: 6px 8px; font-size: 14px; }
-.cat-mgmt-row .emoji-input { width: 48px; text-align: center; }
+.cat-mgmt-row input[type="text"] { padding: 6px 8px; font-size: 14px; min-width: 0; }
+.cat-mgmt-row .emoji-input { width: 48px; flex: 0 0 48px; text-align: center; }
+.cat-mgmt-row .cat-name-input { flex: 1 1 140px; }
+.cat-mgmt-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
 
 .help-text {
   font-size: 12px;
@@ -980,12 +988,14 @@ function renderSettings() {
     html += `<div class="cat-mgmt-row">
       <input type="text" class="emoji-input" value="${escapeHtml(cat.emoji)}" maxlength="4"
         onchange="updateCategory('${cat.id}', 'emoji', this.value)" />
-      <input type="text" style="flex:1;" value="${escapeHtml(cat.name)}"
+      <input type="text" class="cat-name-input" value="${escapeHtml(cat.name)}"
         onchange="updateCategory('${cat.id}', 'name', this.value)" />
       ${typeBadge}
-      <button class="btn small secondary" onclick="moveCategory('${cat.id}', -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
-      <button class="btn small secondary" onclick="moveCategory('${cat.id}', 1)" ${idx === state.categories.length - 1 ? 'disabled' : ''}>↓</button>
-      <button class="btn small danger" onclick="deleteCategory('${cat.id}')">×</button>
+      <div class="cat-mgmt-actions">
+        <button class="btn small secondary" onclick="moveCategory('${cat.id}', -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn small secondary" onclick="moveCategory('${cat.id}', 1)" ${idx === state.categories.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn small danger" onclick="deleteCategory('${cat.id}')">×</button>
+      </div>
     </div>`;
   });
   html += `<button class="btn small secondary" onclick="addCategory()" style="margin-top: 10px;">+ 新增分類</button>
