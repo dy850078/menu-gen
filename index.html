@@ -81,6 +81,7 @@ main { padding: 14px; }
 .summary-text { font-size: 14px; }
 .badge-pre { color: var(--preorder); font-weight: 600; }
 .badge-stk { color: var(--accent); font-weight: 600; }
+.badge-lst { color: #15803d; font-weight: 600; }
 
 .cat-header {
   font-size: 16px;
@@ -137,6 +138,22 @@ main { padding: 14px; }
   border-color: var(--accent);
   color: #b45309;
   font-weight: 600;
+}
+.chip.active.list {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #15803d;
+  font-weight: 600;
+}
+.list-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.chip.list-chip {
+  font-size: 14px;
+  padding: 7px 13px;
 }
 .chip.note-chip { margin-left: auto; }
 .chip.note-chip.has-note { background: #fef3c7; color: #92400e; }
@@ -345,9 +362,9 @@ const STORAGE_KEY = 'menu_app_v1';
 
 const defaultState = {
   categories: [
-    { id: 'c1', name: '1–2人湯品', emoji: '🥣' },
-    { id: 'c2', name: '1–2人分享料理', emoji: '🍽' },
-    { id: 'c3', name: '2–3人分享料理', emoji: '🍽' },
+    { id: 'c1', name: '1–2人湯品', emoji: '🥣', type: 'priced' },
+    { id: 'c2', name: '1–2人分享料理', emoji: '🍽', type: 'priced' },
+    { id: 'c3', name: '2–3人分享料理', emoji: '🍽', type: 'priced' },
   ],
   items: [
     { id: 'i1', name: '鳳梨苦瓜雞湯', price: 180, categoryId: 'c1' },
@@ -373,10 +390,12 @@ const defaultState = {
   weekly: {
     preorder: {},
     stock: {},
+    list: {},
   },
   templates: {
     preorderHeader: '📣 下週好食預訂開放囉（需提前預訂）',
     stockHeader: '🔥【現貨區（售完為止）】',
+    listHeader: '🌿【本週新鮮現有】',
     footer: '📌 溫馨提醒：\n✔ 預訂商品請提前告知\n✔ 現貨數量有限，依下單順序保留\n\n歡迎私訊訂購 🙌',
     separator: '—————————',
   },
@@ -389,7 +408,13 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return Object.assign({}, JSON.parse(JSON.stringify(defaultState)), parsed);
+      const merged = Object.assign({}, JSON.parse(JSON.stringify(defaultState)), parsed);
+      (merged.categories || []).forEach(c => { if (!c.type) c.type = 'priced'; });
+      if (!merged.weekly) merged.weekly = { preorder: {}, stock: {}, list: {} };
+      if (!merged.weekly.list) merged.weekly.list = {};
+      if (!merged.templates) merged.templates = JSON.parse(JSON.stringify(defaultState.templates));
+      if (!merged.templates.listHeader) merged.templates.listHeader = defaultState.templates.listHeader;
+      return merged;
     }
   } catch (e) { console.error(e); }
   return JSON.parse(JSON.stringify(defaultState));
@@ -433,6 +458,8 @@ function renderWeekly() {
   const el = document.getElementById('tab-weekly');
   const preorderCount = Object.keys(state.weekly.preorder).length;
   const stockCount = Object.keys(state.weekly.stock).length;
+  const listCount = Object.keys(state.weekly.list).length;
+  const totalCount = preorderCount + stockCount + listCount;
 
   let html = '';
 
@@ -443,13 +470,14 @@ function renderWeekly() {
         <strong>本週已選</strong>
         <span class="badge-pre">預購 ${preorderCount}</span>
         <span class="badge-stk">現貨 ${stockCount}</span>
+        ${listCount > 0 ? `<span class="badge-lst">蔬果或其他 ${listCount}</span>` : ''}
       </div>
-      ${(preorderCount + stockCount > 0) ? `<button class="btn small secondary" onclick="clearWeekly()">清空</button>` : ''}
+      ${totalCount > 0 ? `<button class="btn small secondary" onclick="clearWeekly()">清空</button>` : ''}
     </div>
   </div>`;
 
   // Tip on first use
-  if (state.items.length > 0 && preorderCount + stockCount === 0) {
+  if (state.items.length > 0 && totalCount === 0) {
     html += `<div class="tip">
       點下方品項旁的「預購」或「現貨」按鈕加入本週菜單，再按最下方「產生菜單文字」即可複製貼到 LINE。
     </div>`;
@@ -461,27 +489,37 @@ function renderWeekly() {
     if (items.length === 0 && !cat._showEmpty) return;
     html += `<div class="card">
       <div class="cat-header">${escapeHtml(cat.emoji)} ${escapeHtml(cat.name)}</div>`;
-    items.forEach(item => {
-      const pre = state.weekly.preorder[item.id];
-      const stk = state.weekly.stock[item.id];
-      const noteText = pre?.note || stk?.note || '';
-      html += `<div class="item-block">
-        <div class="item-row1">
-          <div class="item-name">${escapeHtml(item.name)}</div>
-          <span class="muted">$</span>
-          <input type="number" inputmode="numeric" class="price-input"
-            value="${item.price}"
-            onchange="updateItemPrice('${item.id}', this.value)" />
-        </div>
-        <div class="item-row2">
-          <button class="chip ${pre ? 'active preorder' : ''}" onclick="togglePreorder('${item.id}')">${pre ? '✓ ' : ''}預購</button>
-          <button class="chip ${stk ? 'active stock' : ''}" onclick="toggleStock('${item.id}')">${stk ? '✓ ' : ''}現貨</button>
-          ${stk ? `<span class="muted">數量</span><input type="number" inputmode="numeric" class="qty-input" min="1" value="${stk.quantity}" onfocus="this.select()" onchange="updateQuantity('${item.id}', this.value)" />` : ''}
-          ${(pre || stk) ? `<button class="chip note-chip ${noteText ? 'has-note' : ''}" onclick="editNote('${item.id}')">📝 ${noteText ? '備註' : '加備註'}</button>` : ''}
-        </div>
-        ${noteText ? `<div class="note-display">${escapeHtml(noteText)}</div>` : ''}
-      </div>`;
-    });
+
+    if (cat.type === 'list') {
+      html += `<div class="list-chip-grid">`;
+      items.forEach(item => {
+        const sel = state.weekly.list[item.id];
+        html += `<button class="chip list-chip ${sel ? 'active list' : ''}" onclick="toggleList('${item.id}')">${sel ? '✓ ' : ''}${escapeHtml(item.name)}</button>`;
+      });
+      html += `</div>`;
+    } else {
+      items.forEach(item => {
+        const pre = state.weekly.preorder[item.id];
+        const stk = state.weekly.stock[item.id];
+        const noteText = pre?.note || stk?.note || '';
+        html += `<div class="item-block">
+          <div class="item-row1">
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            <span class="muted">$</span>
+            <input type="number" inputmode="numeric" class="price-input"
+              value="${item.price}"
+              onchange="updateItemPrice('${item.id}', this.value)" />
+          </div>
+          <div class="item-row2">
+            <button class="chip ${pre ? 'active preorder' : ''}" onclick="togglePreorder('${item.id}')">${pre ? '✓ ' : ''}預購</button>
+            <button class="chip ${stk ? 'active stock' : ''}" onclick="toggleStock('${item.id}')">${stk ? '✓ ' : ''}現貨</button>
+            ${stk ? `<span class="muted">數量</span><input type="number" inputmode="numeric" class="qty-input" min="1" value="${stk.quantity}" onfocus="this.select()" onchange="updateQuantity('${item.id}', this.value)" />` : ''}
+            ${(pre || stk) ? `<button class="chip note-chip ${noteText ? 'has-note' : ''}" onclick="editNote('${item.id}')">📝 ${noteText ? '備註' : '加備註'}</button>` : ''}
+          </div>
+          ${noteText ? `<div class="note-display">${escapeHtml(noteText)}</div>` : ''}
+        </div>`;
+      });
+    }
     html += `<button class="add-item-inline" onclick="newItemInCategory('${cat.id}')">+ 在此分類加入新品項</button>`;
     html += `</div>`;
   });
@@ -547,6 +585,16 @@ function toggleStock(itemId) {
   renderWeekly();
 }
 
+function toggleList(itemId) {
+  if (state.weekly.list[itemId]) {
+    delete state.weekly.list[itemId];
+  } else {
+    state.weekly.list[itemId] = true;
+  }
+  save();
+  renderWeekly();
+}
+
 function updateQuantity(itemId, value) {
   const v = Math.max(1, parseInt(value) || 1);
   if (state.weekly.stock[itemId]) {
@@ -589,7 +637,7 @@ function clearNote(itemId) {
 
 function clearWeekly() {
   if (!confirm('確定要清空本週的所有選擇嗎？\n（品項清單不會被刪除）')) return;
-  state.weekly = { preorder: {}, stock: {} };
+  state.weekly = { preorder: {}, stock: {}, list: {} };
   save();
   renderWeekly();
 }
@@ -597,17 +645,26 @@ function clearWeekly() {
 function generateOutput() {
   const t = state.templates;
   let out = '';
-  const hasPreorder = Object.keys(state.weekly.preorder).length > 0;
-  const hasStock = Object.keys(state.weekly.stock).length > 0;
+  const pricedCats = state.categories.filter(c => c.type !== 'list');
+  const listCats = state.categories.filter(c => c.type === 'list');
+  const hasPreorder = pricedCats.some(cat =>
+    state.items.some(i => i.categoryId === cat.id && state.weekly.preorder[i.id])
+  );
+  const hasStock = pricedCats.some(cat =>
+    state.items.some(i => i.categoryId === cat.id && state.weekly.stock[i.id])
+  );
+  const hasList = listCats.some(cat =>
+    state.items.some(i => i.categoryId === cat.id && state.weekly.list[i.id])
+  );
 
-  if (!hasPreorder && !hasStock) {
-    alert('還沒選擇任何品項。請先點品項旁的「預購」或「現貨」按鈕。');
+  if (!hasPreorder && !hasStock && !hasList) {
+    alert('還沒選擇任何品項。請先點品項旁的「預購」「現貨」或蔬果類的品項。');
     return;
   }
 
   if (hasPreorder) {
     out += t.preorderHeader + '\n\n';
-    state.categories.forEach((cat, ci) => {
+    pricedCats.forEach(cat => {
       const itemsInCat = state.items.filter(i =>
         i.categoryId === cat.id && state.weekly.preorder[i.id]
       );
@@ -620,14 +677,14 @@ function generateOutput() {
       });
       out += '\n';
     });
-    if (hasStock) {
+    if (hasStock || hasList) {
       out = out.trimEnd() + '\n' + t.separator + '\n\n';
     }
   }
 
   if (hasStock) {
     out += t.stockHeader + '\n\n';
-    state.categories.forEach(cat => {
+    pricedCats.forEach(cat => {
       const itemsInCat = state.items.filter(i =>
         i.categoryId === cat.id && state.weekly.stock[i.id]
       );
@@ -639,6 +696,21 @@ function generateOutput() {
         if (sel.note) out += `${sel.note}\n`;
       });
       out += '\n';
+    });
+    if (hasList) {
+      out = out.trimEnd() + '\n' + t.separator + '\n\n';
+    }
+  }
+
+  if (hasList) {
+    out += t.listHeader + '\n\n';
+    listCats.forEach(cat => {
+      const itemsInCat = state.items.filter(i =>
+        i.categoryId === cat.id && state.weekly.list[i.id]
+      );
+      if (itemsInCat.length === 0) return;
+      out += `${cat.emoji} ${cat.name}：\n`;
+      out += itemsInCat.map(i => i.name).join('、') + '\n\n';
     });
   }
 
@@ -676,13 +748,14 @@ function renderItems() {
   state.categories.forEach(cat => {
     const items = state.items.filter(i => i.categoryId === cat.id);
     if (items.length === 0) return;
+    const isList = cat.type === 'list';
     html += `<div class="card">
-      <div class="cat-header">${escapeHtml(cat.emoji)} ${escapeHtml(cat.name)} <span class="muted" style="font-weight: normal;">（${items.length}）</span></div>`;
+      <div class="cat-header">${escapeHtml(cat.emoji)} ${escapeHtml(cat.name)} <span class="muted" style="font-weight: normal;">（${items.length}${isList ? '・列表' : ''}）</span></div>`;
     items.forEach((item, idx) => {
       html += `<div class="item-block">
         <div class="item-row1">
           <div class="item-name">${escapeHtml(item.name)}</div>
-          <span class="muted">$${item.price}</span>
+          ${isList ? '' : `<span class="muted">$${item.price}</span>`}
         </div>
         <div class="item-row2">
           <button class="btn small secondary" onclick="editItem('${item.id}')">編輯</button>
@@ -729,21 +802,23 @@ function editItem(itemId) {
 }
 function itemModal(item) {
   const isNew = !item.id;
+  const currentCat = state.categories.find(c => c.id === item.categoryId);
+  const startsAsList = currentCat?.type === 'list';
   const options = state.categories.map(c =>
-    `<option value="${c.id}" ${c.id === item.categoryId ? 'selected' : ''}>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</option>`
+    `<option value="${c.id}" data-type="${c.type || 'priced'}" ${c.id === item.categoryId ? 'selected' : ''}>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</option>`
   ).join('');
   showModal(isNew ? '新增品項' : '編輯品項', `
     <div class="field">
       <label>品項名稱</label>
       <input type="text" class="text-input" id="item-name" value="${escapeHtml(item.name)}" placeholder="例：鳳梨苦瓜雞湯" />
     </div>
-    <div class="field">
+    <div class="field" id="item-price-field"${startsAsList ? ' hidden' : ''}>
       <label>預設價格</label>
-      <input type="number" inputmode="numeric" class="text-input" id="item-price" value="${item.price}" placeholder="180" />
+      <input type="number" inputmode="numeric" class="text-input" id="item-price" value="${item.price || 0}" placeholder="180" />
     </div>
     <div class="field">
       <label>分類</label>
-      <select class="text-input" id="item-cat">${options}</select>
+      <select class="text-input" id="item-cat" onchange="onItemCatChange()">${options}</select>
     </div>
     ${!isNew ? `<p class="muted" style="text-align: center; margin: 4px 0 8px; font-size: 12px; color: #b91c1c;">⚠ 刪除後無法復原，本週若有選此品項也會一併移除</p>` : ''}
     <div style="display: flex; gap: 8px; margin-top: 4px;">
@@ -752,16 +827,26 @@ function itemModal(item) {
     </div>
   `);
 }
+function onItemCatChange() {
+  const sel = document.getElementById('item-cat');
+  const opt = sel.selectedOptions[0];
+  const isList = opt && opt.dataset.type === 'list';
+  document.getElementById('item-price-field').hidden = !!isList;
+}
 function saveItem(itemId) {
   const name = document.getElementById('item-name').value.trim();
-  const price = parseInt(document.getElementById('item-price').value) || 0;
   const categoryId = document.getElementById('item-cat').value;
+  const cat = state.categories.find(c => c.id === categoryId);
+  const isList = cat?.type === 'list';
+  const priceInput = document.getElementById('item-price');
+  const price = isList ? 0 : (parseInt(priceInput?.value) || 0);
   if (!name) { alert('請輸入品項名稱'); return; }
   const duplicate = state.items.find(i => i.id !== itemId && i.name.trim() === name);
   if (duplicate) {
     const dupCat = state.categories.find(c => c.id === duplicate.categoryId);
     const catLabel = dupCat ? `${dupCat.emoji} ${dupCat.name}` : '未分類';
-    if (!confirm(`已經有同名品項：\n「${duplicate.name}」（${catLabel}，$${duplicate.price}）\n\n還是要繼續儲存嗎？`)) return;
+    const priceLabel = dupCat?.type === 'list' ? '' : `，$${duplicate.price}`;
+    if (!confirm(`已經有同名品項：\n「${duplicate.name}」（${catLabel}${priceLabel}）\n\n還是要繼續儲存嗎？`)) return;
   }
   if (itemId) {
     const item = state.items.find(i => i.id === itemId);
@@ -778,6 +863,7 @@ function deleteItem(itemId) {
   state.items = state.items.filter(i => i.id !== itemId);
   delete state.weekly.preorder[itemId];
   delete state.weekly.stock[itemId];
+  delete state.weekly.list[itemId];
   save();
   closeModal();
   render();
@@ -806,11 +892,15 @@ function renderSettings() {
       <div class="cat-header">📂 分類管理</div>
       <p class="help-text">調整分類順序、名稱與 emoji。順序會反映在菜單中。</p>`;
   state.categories.forEach((cat, idx) => {
+    const typeBadge = cat.type === 'list'
+      ? '<span class="muted" style="font-size: 12px; white-space: nowrap;">列表</span>'
+      : '';
     html += `<div class="cat-mgmt-row">
       <input type="text" class="emoji-input" value="${escapeHtml(cat.emoji)}" maxlength="4"
         onchange="updateCategory('${cat.id}', 'emoji', this.value)" />
       <input type="text" style="flex:1;" value="${escapeHtml(cat.name)}"
         onchange="updateCategory('${cat.id}', 'name', this.value)" />
+      ${typeBadge}
       <button class="btn small secondary" onclick="moveCategory('${cat.id}', -1)" ${idx === 0 ? 'disabled' : ''}>↑</button>
       <button class="btn small secondary" onclick="moveCategory('${cat.id}', 1)" ${idx === state.categories.length - 1 ? 'disabled' : ''}>↓</button>
       <button class="btn small danger" onclick="deleteCategory('${cat.id}')">×</button>
@@ -829,6 +919,10 @@ function renderSettings() {
       <div class="field">
         <label>現貨區開頭</label>
         <textarea class="template-edit" onchange="updateTemplate('stockHeader', this.value)">${escapeHtml(t.stockHeader)}</textarea>
+      </div>
+      <div class="field">
+        <label>列表區開頭（蔬果／包子等不標金額的類別）</label>
+        <textarea class="template-edit" onchange="updateTemplate('listHeader', this.value)">${escapeHtml(t.listHeader)}</textarea>
       </div>
       <div class="field">
         <label>結尾溫馨提醒</label>
@@ -889,14 +983,26 @@ function addCategory() {
       <label>分類名稱</label>
       <input type="text" class="text-input" id="cat-name" placeholder="例：飲品" />
     </div>
+    <div class="field">
+      <label>類型</label>
+      <label style="display: block; padding: 6px 0;">
+        <input type="radio" name="cat-type" value="priced" checked />
+        有金額（顯示價格，可選預購／現貨）
+      </label>
+      <label style="display: block; padding: 6px 0;">
+        <input type="radio" name="cat-type" value="list" />
+        列表（生鮮蔬果類，不顯示金額，輸出時用頓號連接）
+      </label>
+    </div>
     <button class="btn block" onclick="saveNewCategory()">新增</button>
   `);
 }
 function saveNewCategory() {
   const emoji = document.getElementById('cat-emoji').value.trim() || '📌';
   const name = document.getElementById('cat-name').value.trim();
+  const type = document.querySelector('input[name="cat-type"]:checked')?.value || 'priced';
   if (!name) { alert('請輸入分類名稱'); return; }
-  state.categories.push({ id: uid(), name, emoji });
+  state.categories.push({ id: uid(), name, emoji, type });
   save();
   closeModal();
   renderSettings();
