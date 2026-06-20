@@ -365,6 +365,8 @@ const defaultState = {
     { id: 'c1', name: '1–2人湯品', emoji: '🥣', type: 'priced' },
     { id: 'c2', name: '1–2人分享料理', emoji: '🍽', type: 'priced' },
     { id: 'c3', name: '2–3人分享料理', emoji: '🍽', type: 'priced' },
+    { id: 'c4', name: '生鮮蔬果', emoji: '🥬', type: 'list' },
+    { id: 'c5', name: '甜品/飲品', emoji: '🥛', type: 'list' },
   ],
   items: [
     { id: 'i1', name: '鳳梨苦瓜雞湯', price: 180, categoryId: 'c1' },
@@ -386,6 +388,57 @@ const defaultState = {
     { id: 'i17', name: '苦瓜鑲肉', price: 180, categoryId: 'c3' },
     { id: 'i18', name: '香Q豬腳', price: 300, categoryId: 'c3' },
     { id: 'i19', name: '香菇肉燥', price: 200, categoryId: 'c3' },
+    // 蔬果
+    { id: 'v01', name: '小松菜', price: 0, categoryId: 'c4' },
+    { id: 'v02', name: '小白菜', price: 0, categoryId: 'c4' },
+    { id: 'v03', name: '空心菜', price: 0, categoryId: 'c4' },
+    { id: 'v04', name: '台灣芹菜', price: 0, categoryId: 'c4' },
+    { id: 'v05', name: '福山萵苣', price: 0, categoryId: 'c4' },
+    { id: 'v06', name: '黒葉白菜', price: 0, categoryId: 'c4' },
+    { id: 'v07', name: '青椒', price: 0, categoryId: 'c4' },
+    { id: 'v08', name: '糯米椒', price: 0, categoryId: 'c4' },
+    { id: 'v09', name: '大黃瓜', price: 0, categoryId: 'c4' },
+    { id: 'v10', name: '蔥', price: 0, categoryId: 'c4' },
+    { id: 'v11', name: '白蘿蔔', price: 0, categoryId: 'c4' },
+    { id: 'v12', name: '紅蘿蔔', price: 0, categoryId: 'c4' },
+    { id: 'v13', name: '馬鈴薯', price: 0, categoryId: 'c4' },
+    { id: 'v14', name: '高麗菜', price: 0, categoryId: 'c4' },
+    { id: 'v15', name: '絲瓜', price: 0, categoryId: 'c4' },
+    { id: 'v16', name: '胡瓜', price: 0, categoryId: 'c4' },
+    { id: 'v17', name: '小黃瓜', price: 0, categoryId: 'c4' },
+    { id: 'v18', name: '貝貝果南瓜', price: 0, categoryId: 'c4' },
+    { id: 'v19', name: '洋蔥', price: 0, categoryId: 'c4' },
+    { id: 'v20', name: '老薑', price: 0, categoryId: 'c4' },
+    { id: 'v21', name: '蒜頭', price: 0, categoryId: 'c4' },
+    { id: 'v22', name: '茄子', price: 0, categoryId: 'c4' },
+    { id: 'v27', name: '玉米筍', price: 0, categoryId: 'c4' },
+    { id: 'v23', name: '牛蒡', price: 0, categoryId: 'c4' },
+    { id: 'v40', name: '真空桂竹筍', price: 0, categoryId: 'c4' },
+    // 菇類
+    { id: 'v25', name: '金針菇', price: 0, categoryId: 'c4' },
+    { id: 'v26', name: '杏鮑菇', price: 0, categoryId: 'c4' },
+    { id: 'v28', name: '雪白菇', price: 0, categoryId: 'c4' },
+    { id: 'v29', name: '鴻禧菇', price: 0, categoryId: 'c4' },
+    { id: 'v30', name: '黑木耳', price: 0, categoryId: 'c4' },
+    { id: 'v31', name: '白木耳', price: 0, categoryId: 'c4' },
+    { id: 'v32', name: '西芹', price: 0, categoryId: 'c4' },
+    // 水果
+    { id: 'v34', name: '有機蘋果', price: 0, categoryId: 'c4' },
+    { id: 'v35', name: '西瓜李子', price: 0, categoryId: 'c4' },
+    { id: 'v37', name: '芭樂', price: 0, categoryId: 'c4' },
+    { id: 'v38', name: '鳳梨', price: 0, categoryId: 'c4' },
+    { id: 'v41', name: '香蕉', price: 0, categoryId: 'c4'},
+    { id: 'v42', name: '木瓜', price: 0, categoryId: 'c4'},
+    { id: 'b01', name: '豆包', price: 0, categoryId: 'c4' },
+    { id: 'b02', name: '五香豆乾', price: 0, categoryId: 'c4' },
+    { id: 'b03', name: '油豆腐', price: 0, categoryId: 'c4' },
+    { id: 'b04', name: '嫩豆腐', price: 0, categoryId: 'c4' },
+    { id: 'b05', name: '麵腸', price: 0, categoryId: 'c4' },
+    { id: 'd01', name: '鮮奶', price: 0, categoryId: 'c5' },
+    { id: 'd02', name: '豆漿', price: 0, categoryId: 'c5' },
+    { id: 'd03', name: '愛玉', price: 0, categoryId: 'c5' },
+    { id: 'd04', name: '嫩仙草', price: 0, categoryId: 'c5' },
+    { id: 'd05', name: '青草茶', price: 0, categoryId: 'c5' },
   ],
   weekly: {
     preorder: {},
@@ -399,6 +452,7 @@ const defaultState = {
     footer: '📌 溫馨提醒：\n✔ 預訂商品請提前告知\n✔ 現貨數量有限，依下單順序保留\n\n歡迎私訊訂購 🙌',
     separator: '—————————',
   },
+  _seededListDefaults: true,
 };
 
 let state = load();
@@ -414,6 +468,19 @@ function load() {
       if (!merged.weekly.list) merged.weekly.list = {};
       if (!merged.templates) merged.templates = JSON.parse(JSON.stringify(defaultState.templates));
       if (!merged.templates.listHeader) merged.templates.listHeader = defaultState.templates.listHeader;
+      if (!merged._seededListDefaults) {
+        const fresh = JSON.parse(JSON.stringify(defaultState));
+        fresh.categories.filter(c => c.type === 'list').forEach(cat => {
+          if (!merged.categories.find(c => c.id === cat.id)) {
+            merged.categories.push(cat);
+            fresh.items.filter(i => i.categoryId === cat.id).forEach(item => {
+              if (!merged.items.find(i => i.id === item.id)) merged.items.push(item);
+            });
+          }
+        });
+        merged._seededListDefaults = true;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
       return merged;
     }
   } catch (e) { console.error(e); }
